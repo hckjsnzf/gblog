@@ -3,17 +3,27 @@ package main
 
 import (
     "os"
-    "os/exec"
+    //"os/exec"
     "log"
     "fmt"
+    "regexp"
     //"io/ioutil"
     "flag"
-    //"path/filepath"
+    "path/filepath"
     "time"
 )
 
 var httpport int
 var workpath string
+
+type rec struct {
+    pname string
+}
+
+var src []rec
+var articlen int
+
+var pos int
 
 func main () {
 
@@ -40,15 +50,72 @@ func main () {
 
     log.Println("after Parse")
     fmt.Println("port is ", httpport)
-    fmt.Println("work path is ", workpath)
-    time.Sleep(10*time.Second)
+    fmt.Println("work path is ", workpath, "\n")
+    time.Sleep(500*time.Millisecond)
 
-    filepath.Walk(workpath, func(path string, info os.FileInfo, err error) error {
-                if err != nil {
-                    return err
-                }
-                if info.IsDir() {
+    articlen = 0
+    filepath.Walk(workpath, checkname)
+
+    src = make([]rec, articlen+1)
+    pos = 0
+    filepath.Walk(workpath, setname)
+
+    fmt.Println("range src")
+    for _, v := range src {
+        fmt.Println(v.pname)
+    }
 
     return
 }
+
+func checkname(path string, info os.FileInfo, err error) error {
+    if err != nil {
+        return err
+    }
+    fname := info.Name()
+    if info.IsDir() {
+        fmt.Println("Just a Dir", fname)
+        if path != workpath {
+            return filepath.SkipDir
+        }
+    } else {
+        matched, err := regexp.MatchString("r20[0-9]{12}z", fname)
+        if err != nil {
+            fmt.Println("Match err", err)
+            return err
+        }
+        if matched == true {
+            fmt.Println("YES, ", fname)
+            articlen++
+        } else {
+            fmt.Println("NO , ", fname)
+        }
+    }
+    return nil
+}
+
+func setname(path string, info os.FileInfo, err error) error {
+    if err != nil {
+        return err
+    }
+    fname := info.Name()
+    if info.IsDir() {
+        if path != workpath {
+            return filepath.SkipDir
+        }
+    } else {
+        matched, err := regexp.MatchString("r20[0-9]{12}z", fname)
+        if err != nil {
+            fmt.Println("Match err", err)
+            return err
+        }
+        if matched == true {
+            src[pos].pname = fname
+            pos++
+        }    }
+    return nil
+}
+
+
+
 
