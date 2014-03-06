@@ -3,6 +3,7 @@ package main
 
 import (
     "os"
+    "bufio"
     //"os/exec"
     "log"
     "fmt"
@@ -63,9 +64,34 @@ func main () {
     fmt.Println("range src")
     for _, v := range src {
         fmt.Println(v.pname)
+        catfile(workpath, v.pname)
     }
 
     return
+}
+
+func catfile(path string, name string) {
+    filename := path+name
+    fmt.Println(filename+"'s contexts:")
+
+    fd, err := os.Open(filename)
+    if(err != nil) {
+        fmt.Println(err)
+        os.Exit(1)
+    }
+
+    defer fd.Close()
+
+    f := bufio.NewReader(fd)
+    scanner := bufio.NewScanner(f)
+    for scanner.Scan() {
+        fmt.Println(scanner.Text())
+    }
+
+    if err:= scanner.Err(); err != nil {
+        fmt.Println(err)
+    }
+
 }
 
 func checkname(path string, info os.FileInfo, err error) error {
