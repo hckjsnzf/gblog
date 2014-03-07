@@ -57,10 +57,12 @@ func main () {
     articlen = 0
     filepath.Walk(workpath, checkname)
 
+    fmt.Println("src's len is", len(src), "before make")
     src = make([]rec, articlen+1)
     pos = 0
     filepath.Walk(workpath, setname)
 
+    fmt.Println("src's cnt", pos, len(src))
     fmt.Println("range src")
     for _, v := range src {
         fmt.Println(v.pname)
@@ -138,6 +140,7 @@ func setname(path string, info os.FileInfo, err error) error {
         if matched == true {
             src[pos].pname = fname
             pos++
+            fmt.Println("ADD ONE")
         }    }
     return nil
 }
