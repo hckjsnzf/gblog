@@ -141,7 +141,8 @@ func setname(path string, info os.FileInfo, err error) error {
             src[pos].pname = fname
             pos++
             fmt.Println("ADD ONE")
-        }    }
+        }
+    }
     return nil
 }
 
