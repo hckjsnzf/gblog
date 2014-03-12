@@ -4,14 +4,17 @@ package main
 import (
     "os"
     "bufio"
+    "bytes"
     //"os/exec"
     "log"
+    "net/http"
     "fmt"
     "regexp"
     //"io/ioutil"
     "flag"
     "path/filepath"
     "time"
+    "strconv"
 )
 
 var httpport int
@@ -20,11 +23,38 @@ var workpath string
 type rec struct {
     pname string
 }
-
 var src []rec
 var articlen int
 
+type bcont struct {
+    name string
+    title string
+    context bytes.Buffer
+}
+
+var slblog []bcont
+
+
+
 var pos int
+
+var bmap map[string] bytes.Buffer
+
+
+func httprmote(w http.ResponseWriter, r *http.Request) {
+    path := r.URL.String()
+    fmt.Println("from client: ", "map len", len(bmap))
+    fmt.Println("--",path,"--")
+    b, ok := bmap[path]
+    if ok {
+        b.WriteTo(w)
+    } else {
+        fmt.Fprintf(w, "zz NOT FOUND")
+    }
+}
+
+
+
 
 func main () {
 
@@ -57,24 +87,46 @@ func main () {
     articlen = 0
     filepath.Walk(workpath, checkname)
 
-    fmt.Println("src's len is", len(src), "before make")
-    src = make([]rec, articlen+1)
+    src = make([]rec, articlen)
+    slblog = make([]bcont, articlen)
+
     pos = 0
     filepath.Walk(workpath, setname)
 
-    fmt.Println("src's cnt", pos, len(src))
     fmt.Println("range src")
+    i := 0
     for _, v := range src {
         fmt.Println(v.pname)
-        catfile(workpath, v.pname)
+        catfile(workpath, v.pname, &(slblog[i]))
+        i++
+    }
+
+    bmap = make(map[string] bytes.Buffer, articlen+1)
+    for _, v := range slblog {
+        bmap[v.name] =  v.context
+        fmt.Println(v.name)
+        fmt.Println("-------")
+        http.HandleFunc(v.name, httprmote)
+    }
+    fmt.Println("bmap len", len(bmap))
+
+    port := strconv.Itoa(httpport)
+    port = ":"+port
+    err := http.ListenAndServe(port, nil)
+    if err != nil {
+        log.Fatal("ListenAndServe: ", err)
     }
 
     return
 }
 
-func catfile(path string, name string) {
+
+func catfile(path string, name string, thisb *bcont) {
     filename := path+name
-    fmt.Println(filename+"'s contexts:")
+    fmt.Println(filename+"'s context:")
+
+    thisb.name = "/"+name
+
 
     fd, err := os.Open(filename)
     if(err != nil) {
@@ -86,8 +138,20 @@ func catfile(path string, name string) {
 
     f := bufio.NewReader(fd)
     scanner := bufio.NewScanner(f)
+    i := 0
     for scanner.Scan() {
-        fmt.Println(scanner.Text())
+        line := scanner.Text()
+        fmt.Println(line)
+        if i==0 {
+            thisb.title = line
+            i = 1
+        }
+        _,err := thisb.context.WriteString(line)
+        if err != nil {
+            fmt.Println(err)
+            return
+        }
+
     }
 
     if err:= scanner.Err(); err != nil {
@@ -138,6 +202,7 @@ func setname(path string, info os.FileInfo, err error) error {
             return err
         }
         if matched == true {
+            fmt.Println("pos now is", pos)
             src[pos].pname = fname
             pos++
             fmt.Println("ADD ONE")
