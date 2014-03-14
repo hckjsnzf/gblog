@@ -136,6 +136,8 @@ func catfile(path string, name string, thisb *bcont) {
 
     defer fd.Close()
 
+    tohtml_init()
+
     f := bufio.NewReader(fd)
     scanner := bufio.NewScanner(f)
     i := 0
@@ -145,7 +147,10 @@ func catfile(path string, name string, thisb *bcont) {
         if i==0 {
             thisb.title = line
             i = 1
+            tohtml_line("@title "+line)
         }
+
+        _,err := tohtml_line(line)
         _,err := thisb.context.WriteString(line)
         if err != nil {
             fmt.Println(err)
@@ -154,9 +159,20 @@ func catfile(path string, name string, thisb *bcont) {
 
     }
 
+    tohtml_end(thisb)
+
     if err:= scanner.Err(); err != nil {
         fmt.Println(err)
     }
+
+}
+
+type htmlt struct {
+    status int
+    context bytes.Buffer
+
+
+func tohtml_init() {
 
 }
 
