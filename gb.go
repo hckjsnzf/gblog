@@ -46,6 +46,7 @@ func httprmote(w http.ResponseWriter, r *http.Request) {
     fmt.Println("from client: ", "map len", len(bmap))
     fmt.Println("--",path,"--")
     b, ok := bmap[path]
+    fmt.Println(string(b.Bytes()))
     if ok {
         b.WriteTo(w)
     } else {
@@ -106,8 +107,13 @@ func main () {
         bmap[v.name] =  v.context
         fmt.Println(v.name)
         fmt.Println("-------")
+        fmt.Println(string(v.context.Bytes()))
         http.HandleFunc(v.name, httprmote)
     }
+
+    /*for _, v := range bmap {
+        fmt.Println(string(v.Bytes()))
+    }*/
     fmt.Println("bmap len", len(bmap))
 
     port := strconv.Itoa(httpport)
@@ -136,8 +142,6 @@ func catfile(path string, name string, thisb *bcont) {
 
     defer fd.Close()
 
-    tohtml_init()
-
     f := bufio.NewReader(fd)
     scanner := bufio.NewScanner(f)
     i := 0
@@ -147,34 +151,59 @@ func catfile(path string, name string, thisb *bcont) {
         if i==0 {
             thisb.title = line
             i = 1
-            tohtml_line("@title "+line)
+            tohtml_init(line)
+        } else {
+            tohtml_line(line)
         }
-
-        _,err := tohtml_line(line)
-        _,err := thisb.context.WriteString(line)
+        /*_,err := thisb.context.WriteString(line)
         if err != nil {
             fmt.Println(err)
             return
-        }
+        }*/
 
     }
 
-    tohtml_end(thisb)
+    thisb.context = tohtml_end()
+    fmt.Println("thisb.context")
+    fmt.Println(string(thisb.context.Bytes()))
 
     if err:= scanner.Err(); err != nil {
         fmt.Println(err)
     }
-
 }
 
 type htmlt struct {
     status int
+    inaction int
+    title string
     context bytes.Buffer
-
-
-func tohtml_init() {
-
 }
+
+var thtml htmlt
+
+func tohtml_init(title string) {
+    thtml.status = 1
+    thtml.inaction = 0
+    thtml.context.Truncate(0)
+    //thtml.context = bytes.NewBuffer(nil)
+
+    thtml.context.WriteString("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\""+
+       "\"http://www.w3.org/TR/html4/loose.dtd\">\n")
+    thtml.context.WriteString("<html><head><title>"+title+"</title>"+
+        "<link rel=\"stylesheet\" type=\"text/css\" href=\"/style.css\"></head><body>")
+    thtml.context.WriteString("<h1>"+title+"</h1>")
+}
+
+func tohtml_line(line string) {
+    thtml.context.WriteString("<p>"+line+"</p>"+"</hr>\n")
+}
+
+func tohtml_end() bytes.Buffer{
+    thtml.context.WriteString("</body></html>")
+
+    return thtml.context
+}
+
 
 func checkname(path string, info os.FileInfo, err error) error {
     if err != nil {
